@@ -5,7 +5,7 @@ const api_key = process.env.NEWS_API_KEY;
 const news_api = process.env.NEWS_API;
 async function fetchNews(searchTerm) {
     try {
-        const url = `${news_api}everything?q=${searchTerm}&pageSize=15&apiKey=${api_key}`;
+        const url = `${news_api}everything?q=${searchTerm}&pageSize=10&apiKey=${api_key}`;
         const newsResponse = await axios.get(url);
         console.log(newsResponse.data);
         return newsResponse.data.articles;
