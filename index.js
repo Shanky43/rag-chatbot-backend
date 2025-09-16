@@ -24,8 +24,8 @@ app.get("/test-connection", async (req, res) => {
     }
 });
 
-app.use('/api/news', newsRoutes);
-
+// app.use('/api/news', newsRoutes);
+app.use('/api/v1', newsRoutes);
 
 
 const PORT = process.env.PORT || 5000;

@@ -25,4 +25,6 @@ model Article {
   content      String?
   published_at DateTime?
   created_at   DateTime  @default(now())
+  is_synced    Boolean   @default(false)
+  synced_at    DateTime?
 }
