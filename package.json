@@ -1,0 +1,35 @@
+{
+  "name": "rag-chatbot-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shanky43/rag-chatbot-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Shanky43/rag-chatbot-backend/issues"
+  },
+  "homepage": "https://github.com/Shanky43/rag-chatbot-backend#readme",
+  "dependencies": {
+    "@prisma/client": "^6.16.1",
+    "axios": "^1.12.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "morgan": "^1.10.1",
+    "nodemon": "^3.1.10",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "prisma": "^6.16.1"
+  }
+}
