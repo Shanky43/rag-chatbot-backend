@@ -20,16 +20,21 @@
   },
   "homepage": "https://github.com/Shanky43/rag-chatbot-backend#readme",
   "dependencies": {
-    "@prisma/client": "^6.16.1",
+    "@google/generative-ai": "^0.24.1",
+    "@prisma/client": "^6.16.2",
     "axios": "^1.12.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
+    "ioredis": "^5.7.0",
     "morgan": "^1.10.1",
     "nodemon": "^3.1.10",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "redis": "^5.8.2",
+    "socket.io": "^4.8.1",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "prisma": "^6.16.1"
+    "prisma": "^6.16.2"
   }
 }

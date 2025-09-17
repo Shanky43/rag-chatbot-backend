@@ -3,8 +3,14 @@ const router = express.Router();
 const { fetchNews, saveNewsToDB } = require('../services/newsService');
 const prisma = require('../services/prismaService');
 const { getJinaEmbeddings } = require('../services/jinaService');
-const { syncToQdrant } = require('../services/qdrantService.js');
-const { searchQdrant } = require('../services/qdrantService.js');
+
+const { generateAnswerWithContext } = require('../services/geminiService.js');
+const { selectMostRelevantArticle } = require('../utils/searchRanking.js');
+const { normalizeArticleData } = require('../utils/articleNormalizer.js');
+
+const { syncToQdrant } = require('../services/qdrantService.JS');
+const { searchQdrant } = require('../services/qdrantService.JS');
+
 
 router.get('/fetch-news', async (req, res) => {
     try {
@@ -121,7 +127,6 @@ router.post('/jina-sync', async (req, res) => {
 });
 
 // Search the synced data in qdrant by converting the query into embeddings, which does the vector search
-
 async function searchInDatabase(searchTerm, limit = 5) {
     try {
         // Enhanced keyword search with better matching
@@ -161,145 +166,171 @@ async function searchInDatabase(searchTerm, limit = 5) {
         return [];
     }
 }
-
 router.post("/search", async (req, res) => {
     console.log(req.query, "request for search");
     const searchTerm = req.query.q;
+    const generateAnswer = req.query.generateAnswer !== 'false';
 
     if (!searchTerm || searchTerm.trim() === '') {
         return res.status(400).json({ message: "Enter a valid search term" });
     }
 
     try {
+        let articles = [];
+        let source = '';
+        let searchStep = 0;
+
         const dbResults = await searchInDatabase(searchTerm, 5);
 
         if (dbResults && dbResults.length > 0) {
-            console.log(` Found ${dbResults.length} results in database`);
-            return res.json({
-                source: 'database',
-                searchStep: 1,
-                count: dbResults.length,
-                articles: dbResults,
-                message: `Found ${dbResults.length} articles in database`
-            });
-        }
+            console.log(`Found ${dbResults.length} results in database`);
+            articles = dbResults;
+            source = 'database';
+            searchStep = 1;
+        } else {
 
-        const queryEmbeddings = await getJinaEmbeddings([searchTerm]);
+            const queryEmbeddings = await getJinaEmbeddings([searchTerm]);
 
-        if (!queryEmbeddings || queryEmbeddings.length === 0) {
-            return res.status(500).json({ message: "Failed to generate query embedding" });
-        }
+            if (!queryEmbeddings || queryEmbeddings.length === 0) {
+                return res.status(500).json({ message: "Failed to generate query embedding" });
+            }
 
-        const queryEmbedding = queryEmbeddings[0];
+            const queryEmbedding = queryEmbeddings[0];
+            const searchResults = await searchQdrant(queryEmbedding, 5);
 
-        if (!queryEmbedding || !Array.isArray(queryEmbedding) || queryEmbedding.length === 0) {
-            return res.status(500).json({ message: "Invalid query embedding generated" });
-        }
-
-        console.log(`Generated embedding with ${queryEmbedding.length} dimensions`);
-
-        const searchResults = await searchQdrant(queryEmbedding, 5);
-
-        if (searchResults && Array.isArray(searchResults) && searchResults.length > 0) {
-            console.log(` Found ${searchResults.length} results in Qdrant`);
-            return res.json({
-                source: 'qdrant',
-                searchStep: 2,
-                count: searchResults.length,
-                articles: searchResults.map(r => ({
+            if (searchResults && Array.isArray(searchResults) && searchResults.length > 0) {
+                console.log(`Found ${searchResults.length} results in Qdrant`);
+                articles = searchResults.map(r => ({
                     ...r.payload,
                     score: r.score,
                     similarity: `${Math.round(r.score * 100)}%`
-                })),
-                message: `Found ${searchResults.length} similar articles in vector database`
-            });
-        }
-        const freshArticles = await fetchNews(searchTerm);
+                }));
+                source = 'qdrant';
+                searchStep = 2;
+            } else {
 
-        if (!freshArticles || freshArticles.length === 0) {
-            return res.status(404).json({
-                message: 'No articles found anywhere.',
-                searchSteps: ['database', 'qdrant', 'newsapi'],
-                suggestion: 'Try different keywords or broader search terms'
-            });
-        }
+                console.log("No results found anywhere, fetching fresh articles from News API...");
+                const freshArticles = await fetchNews(searchTerm);
 
-        console.log(`Fetched ${freshArticles.length} fresh articles from News API`);
-
-        // Process and save fresh articles
-        const contents = freshArticles.map(a => a.content || a.description || '');
-        const embeddings = await getJinaEmbeddings(contents);
-
-        if (!embeddings || embeddings.length !== freshArticles.length) {
-            console.error("Mismatch between articles and embeddings count");
-            // Still return articles even if embedding fails
-            return res.json({
-                source: 'newsapi',
-                searchStep: 3,
-                count: freshArticles.length,
-                articles: freshArticles,
-                warning: 'Articles saved but embeddings failed'
-            });
-        }
-
-        const dbSyncPromises = freshArticles.map(async (article, idx) => {
-            try {
-                const createdArticle = await prisma.article.create({
-                    data: {
-                        source_name: article.source_name,
-                        author: article.author,
-                        title: article.title,
-                        description: article.description,
-                        urlToImage: article.urlToImage,
-                        url: article.url,
-                        published_at: new Date(article.published_at),
-                        content: article.content,
-                        is_synced: false,
-                        synced_at: null
-                    }
-                });
-
-                const embedding = embeddings[idx];
-                if (embedding && Array.isArray(embedding) && embedding.length > 0) {
-                    try {
-                        await syncToQdrant(createdArticle.id, embedding, {
-                            title: createdArticle.title,
-                            description: createdArticle.description,
-                            url: createdArticle.url,
-                            published_at: createdArticle.published_at
-                        });
-
-                        // Update sync status after successful Qdrant sync
-                        await prisma.article.update({
-                            where: { id: createdArticle.id },
-                            data: { is_synced: true, synced_at: new Date() }
-                        });
-
-                        console.log(` Article ${createdArticle.id} synced successfully`);
-                    } catch (syncError) {
-                        console.error(`Failed to sync article ${createdArticle.id} to Qdrant:`, syncError.message);
-                    }
+                if (!freshArticles || freshArticles.length === 0) {
+                    return res.status(404).json({
+                        message: 'No articles found anywhere.',
+                        searchSteps: ['database', 'qdrant', 'newsapi'],
+                        suggestion: 'Try different keywords or broader search terms'
+                    });
                 }
 
-                return createdArticle;
-            } catch (error) {
-                console.error(` Failed to save article: ${article.title}`, error.message);
-                return null;
+
+                const normalizedArticles = freshArticles.map(article => normalizeArticleData(article));
+
+                const contents = normalizedArticles.map(a => a.content || a.description || '');
+                const embeddings = await getJinaEmbeddings(contents);
+
+                if (embeddings && embeddings.length === normalizedArticles.length) {
+                    const dbSyncPromises = normalizedArticles.map(async (article, idx) => {
+                        try {
+                            const createdArticle = await prisma.article.create({
+                                data: {
+                                    source_name: article.source_name,
+                                    author: article.author,
+                                    title: article.title,
+                                    description: article.description,
+                                    urlToImage: article.urlToImage,
+                                    url: article.url,
+                                    published_at: article.published_at,
+                                    content: article.content,
+                                    is_synced: false,
+                                    synced_at: null
+                                }
+                            });
+
+                            const embedding = embeddings[idx];
+                            if (embedding && Array.isArray(embedding) && embedding.length > 0) {
+                                try {
+                                    await syncToQdrant(createdArticle.id, embedding, {
+                                        title: createdArticle.title,
+                                        description: createdArticle.description,
+                                        url: createdArticle.url,
+                                        published_at: createdArticle.published_at
+                                    });
+
+                                    await prisma.article.update({
+                                        where: { id: createdArticle.id },
+                                        data: { is_synced: true, synced_at: new Date() }
+                                    });
+
+                                    console.log(`Article ${createdArticle.id} synced successfully`);
+                                } catch (syncError) {
+                                    console.error(`Failed to sync article ${createdArticle.id} to Qdrant:`, syncError.message);
+                                }
+                            }
+                            return createdArticle;
+                        } catch (error) {
+                            console.error(`Failed to save article: ${article.title}`, error.message);
+                            return null;
+                        }
+                    });
+
+                    await Promise.all(dbSyncPromises);
+                }
+
+
+                articles = freshArticles;
+                source = 'newsapi';
+                searchStep = 3;
             }
-        });
+        }
 
-        const savedArticles = await Promise.all(dbSyncPromises);
-        const successfulSaves = savedArticles.filter(Boolean);
 
-        console.log(` Successfully processed ${successfulSaves.length}/${freshArticles.length} articles`);
+        if (articles.length > 0) {
+            const mostRelevantArticle = selectMostRelevantArticle(articles, searchTerm);
 
-        res.json({
-            source: 'newsapi',
-            searchStep: 3,
-            count: freshArticles.length,
-            articles: freshArticles,
-            saved: successfulSaves.length,
-            message: `Fetched ${freshArticles.length} fresh articles and saved ${successfulSaves.length} to database`
+            console.log(`Selected most relevant article: "${mostRelevantArticle.title?.substring(0, 60)}..."`);
+
+            let aiResponse = null;
+            if (generateAnswer && mostRelevantArticle) {
+                console.log("Generating AI answer with single most relevant article...");
+                try {
+
+                    aiResponse = await generateAnswerWithContext(searchTerm, [mostRelevantArticle]);
+                    console.log("AI answer generated successfully");
+                } catch (error) {
+                    console.error("Failed to generate AI answer:", error.message);
+                }
+            }
+
+            return res.json({
+                query: searchTerm,
+                source: source,
+                searchStep: searchStep,
+                totalFound: articles.length,
+                selectedArticle: {
+                    ...mostRelevantArticle,
+                    relevanceScore: mostRelevantArticle.relevanceScore?.toFixed(2)
+                },
+                aiAnswer: aiResponse,
+                sourceDetails: {
+                    title: mostRelevantArticle.title,
+                    author: mostRelevantArticle.author,
+                    source_name: mostRelevantArticle.source_name || mostRelevantArticle.source?.name,
+                    url: mostRelevantArticle.url,
+                    urlToImage: mostRelevantArticle.urlToImage,
+                    published_at: mostRelevantArticle.published_at || mostRelevantArticle.publishedAt,
+                    similarity: mostRelevantArticle.similarity,
+                    score: mostRelevantArticle.score
+                },
+                sourcesConsidered: articles.length,
+                message: aiResponse
+                    ? `Found ${articles.length} articles, selected most relevant one for AI analysis`
+                    : `Found ${articles.length} articles from ${source}`
+            });
+        }
+
+        // No articles found
+        return res.status(404).json({
+            message: 'No articles found.',
+            query: searchTerm,
+            searchSteps: ['database', 'qdrant', 'newsapi']
         });
 
     } catch (error) {
@@ -310,5 +341,6 @@ router.post("/search", async (req, res) => {
         });
     }
 });
+
 
 module.exports = router;
