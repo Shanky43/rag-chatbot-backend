@@ -2267,7 +2267,26 @@ const processSearchQuery = async (query, sessionId, socket) => {
             let aiError = null;
 
             if (!mostRelevantArticle || (!mostRelevantArticle.title && !mostRelevantArticle.content && !mostRelevantArticle.description)) {
-                aiResponse = `I found some results for "${query}" but the articles don't contain readable content. This might be due to data indexing issues. Please try a more specific query or check back later.`;
+                // aiResponse = `I found some results for "${query}" but the articles don't contain readable content. This might be due to data indexing issues. Please try a more specific query or check back later.`;
+                function escapeHtml(str) {
+                    return str
+                        .replaceAll("&", "&amp;")
+                        .replaceAll("<", "&lt;")
+                        .replaceAll(">", "&gt;")
+                        .replaceAll('"', "&quot;")
+                        .replaceAll("'", "&#39;");
+                }
+
+                aiResponse = `
+<div>
+  <p>I found some results for <b class="query">${escapeHtml(query)}</b>,</p>
+  <p>but the articles don’t have enough readable content to share right now.</p>
+  <p>Please try refining your query or check back later for more details.</p>
+</div>
+`;
+
+
+
             } else {
                 try {
                     aiResponse = await generateAnswerWithContextRetry(query, [mostRelevantArticle]);
