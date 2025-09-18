@@ -8,7 +8,7 @@
 // // const { fetchNews } = require('../services/newsService');
 // // const { generateAnswerWithContext } = require('../services/geminiService');
 // // const prisma = require('../services/prismaService');
-// // const { searchQdrant } = require('../services/qdrantService.JS');
+// // const { searchQdrant } = require('../services/qdrantService.js');
 
 // // // Retry function for Gemini API with exponential backoff
 // // const generateAnswerWithContextRetry = async (query, articles, maxRetries = 3) => {
@@ -246,7 +246,7 @@
 
 // //                     // Create a fallback response based on the article
 // //                     const article = mostRelevantArticle;
-// //                     //                     aiResponse = `**${query}**\n${article.source_name ? `From ${article.source_name}.` : '' }. 
+// //                     //                     aiResponse = `**${query}**\n${article.source_name ? `From ${article.source_name}.` : '' }.
 
 // //                     // **${article.title || 'Article'}**
 // //                     // ${article.description || article.content?.substring(0, 200) + '...' || 'Please check the full article for details.'}
@@ -693,7 +693,7 @@
 // // const { fetchNews } = require('../services/newsService');
 // // const { generateAnswerWithContext } = require('../services/geminiService');
 // // const prisma = require('../services/prismaService');
-// // const { searchQdrant } = require('../services/qdrantService.JS');
+// // const { searchQdrant } = require('../services/qdrantService.js');
 
 // // // Retry function for Gemini API with exponential backoff
 // // const generateAnswerWithContextRetry = async (query, articles, maxRetries = 3) => {
@@ -1405,7 +1405,7 @@
 // const { fetchNews } = require('../services/newsService');
 // const { generateAnswerWithContext } = require('../services/geminiService');
 // const prisma = require('../services/prismaService');
-// const { searchQdrant } = require('../services/qdrantService.JS');
+// const { searchQdrant } = require('../services/qdrantService.js');
 
 // // Retry function for Gemini API with exponential backoff
 // const generateAnswerWithContextRetry = async (query, articles, maxRetries = 3) => {
@@ -2033,7 +2033,7 @@ const { getJinaEmbeddings } = require('../services/jinaService');
 const { fetchNews } = require('../services/newsService');
 const { generateAnswerWithContext } = require('../services/geminiService');
 const prisma = require('../services/prismaService');
-const { searchQdrant } = require('../services/qdrantService.JS');
+const { searchQdrant } = require('../services/qdrantService.js');
 
 // Processing states to prevent duplicate processing
 const processingStates = new Map();

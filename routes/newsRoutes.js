@@ -8,8 +8,8 @@ const { generateAnswerWithContext } = require('../services/geminiService.js');
 const { selectMostRelevantArticle } = require('../utils/searchRanking.js');
 const { normalizeArticleData } = require('../utils/articleNormalizer.js');
 
-const { syncToQdrant } = require('../services/qdrantService.JS');
-const { searchQdrant } = require('../services/qdrantService.JS');
+const { syncToQdrant } = require('../services/qdrantService.js');
+const { searchQdrant } = require('../services/qdrantService.js');
 
 
 router.get('/fetch-news', async (req, res) => {
