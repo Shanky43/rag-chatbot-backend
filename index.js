@@ -37,7 +37,7 @@ const io = socketIo(server, {
 });
 
 
-app.get("/test-connection", async (req, res) => {
+app.get("/", async (req, res) => {
     try {
         const response = await prisma.$queryRaw`SELECT NOW()`;
         res.status(200).json({ status: "success", time: response.rows[0] });
