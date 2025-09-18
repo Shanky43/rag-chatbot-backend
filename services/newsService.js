@@ -4,6 +4,7 @@ const prisma = require("./prismaService");
 const api_key = process.env.NEWS_API_KEY;
 const news_api = process.env.NEWS_API;
 async function fetchNews(searchTerm) {
+    console.log(news_api, "news_api")
     try {
         const url = `${news_api}everything?q=${searchTerm}&pageSize=10&apiKey=${api_key}`;
         const newsResponse = await axios.get(url);
