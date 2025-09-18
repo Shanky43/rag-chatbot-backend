@@ -40,12 +40,14 @@ const io = socketIo(server, {
 app.get("/", async (req, res) => {
     try {
         const response = await prisma.$queryRaw`SELECT NOW()`;
-        res.status(200).json({ status: "success", time: response.rows[0] });
+        res.status(200).json({ status: "success", time: response[0] }); 
     } catch (error) {
         console.error("Error testing connection", error);
         res.status(500).json({ status: "error", message: "Internal Server Error" });
     }
 });
+
+
 
 // app.use('/api/news', newsRoutes);
 app.use('/api/v1', newsRoutes);
