@@ -6,6 +6,24 @@ const router = express.Router();
 const { addMessageToRedis, redisSessionExists, clearRedisSession } = require('../services/redisService');
 const { createChatSession, getCombinedChatHistory, backupSessionToDb, deleteChatSession, getSessionDbStats } = require('../services/chatDbService');
 
+
+
+router.get('/', (req, res) => {
+    res.json({
+        success: true,
+        message: 'Welcome to the RAG Chatbot API',
+        endpoints: {
+            createSession: 'POST /sessions',
+            getAllSessions: 'GET /sessions',
+            getSessionHistory: 'GET /sessions/:sessionId/history',
+            clearSessionCache: 'DELETE /sessions/:sessionId/cache',
+            deleteSession: 'DELETE /sessions/:sessionId',
+            backupSession: 'POST /sessions/:sessionId/backup',
+            health: '/health'
+        }
+    });
+});
+
 // Get all chat sessions with basic info
 router.get('/sessions', async (req, res) => {
     try {
@@ -25,6 +43,8 @@ router.get('/sessions', async (req, res) => {
         });
     }
 });
+
+
 
 // Create new chat session
 router.post('/sessions', async (req, res) => {
