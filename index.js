@@ -16,42 +16,25 @@ const chatRoutes = require('./routes/chatRoutes');
 const prisma = new PrismaClient()
 const app = express();
 const server = http.createServer(app);
-// app.use(cors());
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
 
-const allowedOrigins = [
-    process.env.FRONTEND_URL,
-    process.env.FRONTEND_DEPLOYED_URL
-];
-
+// Configure Socket.IO
+// const io = socketIo(server, {
+//     cors: {
+//         origin: process.env.FRONTEND_URL || "http://localhost:3000",
+//         methods: ["GET", "POST"],
+//         credentials: true
+//     }
+// });
 const io = socketIo(server, {
     cors: {
-        origin: function (origin, callback) {
-            if (!origin) return callback(null, true);
-            if (allowedOrigins.includes(origin)) {
-                callback(null, true);
-            } else {
-                callback(new Error("CORS policy: Origin not allowed"));
-            }
-        },
-        methods: ["GET", "POST"],
-        credentials: true
+        origin: "*"
     }
 });
-app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin) return callback(null, true); // allow Postman or server requests
-        if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error("CORS policy: Origin not allowed"));
-        }
-    },
-    credentials: true
-}));
 
 
 app.get("/test-connection", async (req, res) => {
