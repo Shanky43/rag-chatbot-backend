@@ -1,4 +1,3 @@
-// services/geminiService.js
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { calculateRelevanceScore } = require('../utils/searchRanking.js');
 
