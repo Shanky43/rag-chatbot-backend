@@ -558,7 +558,7 @@ Error: WebSocket connection failed
 Error: Can't reach database server
 ```
 **Solutions**:
-- Verify DATABASE_URL format
+- Verify POSTGRES_URL format
 - Check PostgreSQL service status
 - Review connection pool limits
 - Validate credentials
