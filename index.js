@@ -9,7 +9,7 @@ const socketIo = require('socket.io');
 require('dotenv').config();
 
 // Import routes and functional components
-const { setupSocketHandlers } = require('./socket/socketHandler');
+const { setupSocketHandlers } = require('./socket/socketHandler.js');
 const newsRoutes = require('./routes/newsRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 
@@ -20,6 +20,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
+
 
 // Configure Socket.IO
 // const io = socketIo(server, {
